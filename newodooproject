@@ -1,0 +1,283 @@
+#!/bin/bash
+VIRTUALENV=$1
+CVS_NAME=$1
+
+if [[ -z "$1" ]]; then
+    echo "/!\\/!\\ Vous devez spécifier le nom du virtualenv à créer /!\\/!\\"
+    echo "Exemple : newodooproject monvirtualenv"
+    exit 0
+fi
+
+DEFAULT_PYTHON=python2.7
+PYTHON=""
+CVS_LOCAL_NAME=""
+CREATE_ODOO_CONF=""
+CREATE_XMLRPC_FILE=""
+CREATE_TEST_FILE=""
+
+WORK_PATH=/home/majac
+USER_NAME="Maxime JACQUET"
+USER_EMAIL="maxime.jacquet@smile.fr"
+
+
+echo "##### Création d'un nouveau projet Odoo #####"
+echo
+echo "/!\\ Merci de renseigner les informations suivantes /!\\"
+echo
+echo "?? WORK_PATH (utlisé pour la création du virtualenv) ??"
+read -e -p " : " -i "$WORK_PATH" WORK_PATH
+echo
+echo "?? USER_NAME (utlisé pour la config git) ??"
+read -e -p " : " -i "$USER_NAME" USER_NAME
+echo
+echo "?? USER_EMAIL (utilisé pour la config git) ??"
+read -e -p " : " -i "$USER_EMAIL" USER_EMAIL
+echo
+
+echo
+read -p "Continuer ? (Oui : [OoyY]) " -n 1 -r
+echo
+
+mkdir -p $WORK_PATH
+cd $WORK_PATH
+
+if [[ $REPLY =~ ^[OoyY]$ ]]; then
+    echo "---------------------------------------------------------"
+    echo
+
+    if [ ! -d "virtualenv" ]; then
+        # Control will enter here if $DIRECTORY exists.
+        echo "... dossier virtualenv non trouvé dans $WORK_PATH."
+        mkdir virtualenv
+        echo "... dossier virtualenv créé dans $WORK_PATH."
+    fi
+
+    cd $WORK_PATH/virtualenv
+
+    read -p "?? Voulez vous créer ce virtualenv avec une version python spécifique --python=/usr/bin/pythonX ? (Oui : [OoyY]) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[OoyY]$ ]]; then
+        echo "    ?? Quelle version de Python voulez vous utiliser ??"
+        echo "    /!\\ assurez vous de l'avoir installé sur votre poste avant /!\\"
+        read -e -p "     : " -i "$DEFAULT_PYTHON" PYTHON
+
+    fi
+
+    read -p "?? Voulez vous créer ce virtualenv avec l'option --system-site-packages option ? (Oui : [OoyY]) " -n 1 -r
+    echo
+
+    if [[ $REPLY =~ ^[OoyY]$ ]]; then
+        echo
+        if [[ -n "${PYTHON}" ]]; then
+            virtualenv $VIRTUALENV --python=$PYTHON --system-site-packages
+            echo "... virtualenv "$1" a été créé AVEC les packages."
+            echo "... virtualenv "$1" a été créé AVEC Python "$PYTHON"."
+        else
+            virtualenv $VIRTUALENV --system-site-packages
+            echo "... virtualenv "$1" a été créé AVEC les packages."
+        fi
+    else
+        if [[ -n "${PYTHON}" ]]; then
+            virtualenv $VIRTUALENV --python=$PYTHON
+            echo "... virtualenv "$1" a été créé SANS les packages."
+            echo "... virtualenv "$1" a été créé AVEC Python "$PYTHON"."
+        else
+            virtualenv $VIRTUALENV
+            echo "... virtualenv "$1" a été créé SANS les packages."
+        fi
+    fi
+    echo
+    echo
+
+    cd $WORK_PATH/virtualenv/$VIRTUALENV
+
+    read -p "?? Voulez vous créer le fichier odoo-server.conf ? (Oui : [OoyY]) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[OoyY]$ ]]; then
+        CREATE_ODOO_CONF=1
+    fi
+    echo
+    echo
+
+    read -p "?? Voulez vous créer le fichier xmlrpc_exec.py ? (Oui : [OoyY]) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[OoyY]$ ]]; then
+        CREATE_XMLRPC_FILE=1
+    fi
+    echo
+    echo
+    
+    read -p "?? Voulez vous créer le fichier run_test.py ? (Oui : [OoyY]) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[OoyY]$ ]]; then
+        CREATE_TEST_FILE=1
+    fi
+    echo
+    echo
+    
+    PS3='?? Quel VCS voulez vous utiliser ? '
+    options=("SVN" "Git" "Aucun")
+    select opt in "${options[@]}"
+    do
+        case $opt in
+            "SVN")
+                echo "** SVN ** "
+                echo
+                echo "... create workspace/trunk"
+                echo "?? Voulez vous checkout le dossier trunk (svn co https://dedisvn.smile.fr/$CVS_NAME/trunk) ?"
+                read -p "(Oui : [OoyY]) : " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[OoyY]$ ]]; then
+                    mkdir workspace
+                    echo "3..."
+                    sleep 1
+                    echo "2..."
+                    sleep 1
+                    echo "1..."
+                    sleep 1
+                    /bin/bash -c "svn co https://dedisvn.smile.fr/$CVS_NAME/trunk ./workspace/trunk"
+                else
+                    mkdir -p workspace/trunk
+                fi
+                echo
+                echo "... create workspace/branches"
+                mkdir -p workspace/branches
+                echo
+                echo "... create workspace/tags"
+                mkdir -p workspace/tags
+                break
+                ;;
+            "Git")
+                echo "** Git ** "
+                echo
+                echo "?? Quel est le groupe Git pour ce repo ??"
+                read -e -p " : " -i "erp" CVS_GROUP
+                echo
+                echo "?? Quel est le nom du repo Git ??"
+                read -e -p " : " -i "$CVS_NAME" CVS_NAME
+                echo
+                echo "?? Voulez vous cloner le dépôt (git clone git@git.smile.fr:$CVS_GROUP/$CVS_NAME.git) ?"
+                read -p "(Oui : [OoyY]) : " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[OoyY]$ ]]; then
+                    mkdir workspace
+                    cd workspace
+                    echo "3..."
+                    sleep 1
+                    echo "2..."
+                    sleep 1
+                    echo "1..."
+                    sleep 1
+                    /bin/bash -c "git clone git@git.smile.fr:$CVS_GROUP/$CVS_NAME.git"
+                    echo "?? Voulez vous mettre la configuration suivante pour ce dépôt : ?"
+                    echo "    * git config --local user.email $USER_EMAIL"
+                    echo "    * git config --local user.name $USER_NAME"
+                    read -p "(Oui : [OoyY]) : " -n 1 -r
+                    echo
+                    cd $CVS_NAME
+                    if [[ $REPLY =~ ^[OoyY]$ ]]; then
+                        git config --local user.email "$USER_EMAIL"
+                        git config --local user.name "$USER_NAME"
+                    fi
+                    ls -lh
+                    cat << 'EOF' > .git/hooks/pre-commit
+#!/bin/sh
+###############################################################################
+# Based on https://gist.github.com/stuntgoat/8800170
+# Git pre-commit hook for finding and warning about Python print
+# statements.
+#
+
+# Get the current git HEAD
+head=`git rev-parse --verify HEAD`
+
+# BSD regex for finding Python print statements
+find_print='\+[[:space:]]*print[[:space:](]*'
+
+# Save output to $out var
+out=`git diff ${head} | grep -e ${find_print}`
+
+# Count number of prints
+count=`echo "${out}" | grep -e '\w' | wc -l`
+if [ $count -gt 0 ];
+   then
+    echo
+    echo "###############################################################################"
+    echo "$out"
+    echo "###############################################################################"
+    echo "       " $count "print statement(s) found in commit!"
+    echo
+    echo ">>> \c"
+    exit 1
+fi
+EOF
+                else
+                    mkdir workspace
+                fi
+                break
+                ;;
+            "Aucun")
+                mkdir workspace
+                break
+                ;;
+            *) echo invalid option;;
+        esac
+    done
+
+    if [[ -n "${CREATE_ODOO_CONF}" ]]; then
+        cat << EOF > $WORK_PATH/virtualenv/$VIRTUALENV/odoo-server.conf
+[options]
+; EDIT ME
+prefix = $WORK_PATH/virtualenv/$VIRTUALENV/workspace/$CVS_NAME
+addons_path = %(prefix)s/server/addons,%(prefix)s/server/odoo/addons,
+
+;dbfilter=$VIRTUALENV
+
+;enable_email_sending = False
+;enable_email_fetching = False
+
+;server.environment = dev
+;server.environment.ribbon_color = rgba(255, 0, 255, .6)
+
+;upgrades_path = %(prefix)s/upgrades
+;stop_after_upgrades = True
+EOF
+    fi
+
+    if [[ -n "${CREATE_XMLRPC_FILE}" ]]; then
+        cat << 'EOF' > $WORK_PATH/virtualenv/$VIRTUALENV/xmlrpc_exec.py
+import xmlrpclib
+import getpass
+sock = xmlrpclib.ServerProxy('http://localhost:8069/xmlrpc/object')
+base = 'base'
+uid = 1
+pwd = getpass.getpass()
+sock_exec = lambda *a: sock.execute(base, uid, pwd, *a)
+sock_exec_wkf = lambda *a: sock.exec_workflow(base, uid, pwd, *a)
+EOF
+    fi
+
+    if [[ -n "${CREATE_TEST_FILE}" ]]; then
+        cat << 'EOF' > $WORK_PATH/virtualenv/$VIRTUALENV/run_test.py
+# -*- coding: utf-8 -*-
+import xmlrpclib
+import getpass
+sock = xmlrpclib.ServerProxy('http://localhost:8069/xmlrpc/common')
+base = 'base'
+uid = 1
+pwd = getpass.getpass()
+# Mettre le nom du module pour lequel lancer le test
+# Le module smile_tests doit être installé sur Odoo
+# Et votre module doit comporter des tests unitaires
+sock.run_tests(pwd, base, ['MODULE_NAME'])
+EOF
+    fi
+
+    echo
+    echo "Virtualenv created on $WORK_PATH/virtualenv/$VIRTUALENV"
+    echo
+    echo "-------------------------------------"
+    ls -lh $MOVETO
+    
+    exit 0
+fi

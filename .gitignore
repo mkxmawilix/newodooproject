@@ -1,0 +1,10 @@
+*.pyc
+*~
+*.swp
+*.swo
+.idea/
+.#*
+.*#
+.project
+.pydevproject
+.settings
